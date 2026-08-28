@@ -1,0 +1,11 @@
+import express from 'express';
+import Database from 'better-sqlite3';
+import path from 'path';
+import {fileURLToPath} from 'url';
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
+const app=express();const db=new Database(path.join(__dirname,'black-pine-designs.db'));
+db.exec(`CREATE TABLE IF NOT EXISTS designs (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, garment_type TEXT NOT NULL, configuration TEXT NOT NULL)`);
+app.use(express.json({limit:'25mb'}));app.use(express.static(__dirname));
+app.post('/api/designs',(req,res)=>{const now=new Date().toISOString();const data=req.body||{};const r=db.prepare('INSERT INTO designs(created_at,updated_at,garment_type,configuration) VALUES(?,?,?,?)').run(now,now,data.garmentType||'tshirt',JSON.stringify(data));res.json({id:r.lastInsertRowid,createdAt:now})});
+app.get('/api/designs/:id',(req,res)=>{const row=db.prepare('SELECT * FROM designs WHERE id=?').get(req.params.id);if(!row)return res.status(404).json({error:'Not found'});res.json({id:row.id,...JSON.parse(row.configuration),createdAt:row.created_at,updatedAt:row.updated_at})});
+app.listen(process.env.PORT||3000,()=>console.log('Black Pine Clothing running at http://localhost:'+(process.env.PORT||3000)));
